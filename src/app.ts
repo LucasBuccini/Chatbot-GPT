@@ -4,6 +4,7 @@ import cors from "cors"
 import dotenv from "dotenv"
 import { sendWhatsappMessage } from "./services/twilio";
 import { getOpenAICompletion } from "./services/openai";
+import { splitMessage } from "./services/splitmessage";
 
 
 const app = express()
@@ -31,8 +32,13 @@ app.post('/chat/receive', async (req,res)=>{
     try{
         const completion = await getOpenAICompletion(messageBody)
 
-        await sendWhatsappMessage(to, completion)
-        res.status(200).json({success: true, messageBody})
+        const messageParts = splitMessage(completion, 1500)
+
+        for (const part of messageParts) {
+            await sendWhatsappMessage(to, part)
+        }
+
+        res.status(200).json({ success: true, messageBody })
     }catch(error){
         res.status(500).json({success: false, error})
     }
